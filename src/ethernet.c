@@ -11,6 +11,7 @@
  */
 void ethernet_in(buf_t *buf) {
     // TO-DO
+
 }
 /**
  * @brief 处理一个要发送的数据包
@@ -21,6 +22,7 @@ void ethernet_in(buf_t *buf) {
  */
 void ethernet_out(buf_t *buf, const uint8_t *mac, net_protocol_t protocol) {
     // TO-DO
+
 }
 /**
  * @brief 初始化以太网协议
