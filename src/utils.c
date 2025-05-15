@@ -71,6 +71,25 @@ uint8_t ip_prefix_match(uint8_t *ipa, uint8_t *ipb) {
  */
 uint16_t checksum16(uint16_t *data, size_t len) {
     // TO-DO
+    // Step1 按16位分组相加
+    uint32_t sum = 0;
+    while (len > 1) {
+        sum += *data++;
+        len -= 2;
+    }
+
+    // Step2 处理剩余8位
+    if (len) {
+        sum += *(uint8_t *)data;
+    }
+
+    // Step3 循环处理高 16 位
+    while (sum >> 16) {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+
+    // Step4 取反得到校验和
+    return (uint16_t)~sum;
 }
 
 #pragma pack(1)
@@ -94,4 +113,30 @@ typedef struct peso_hdr {
  */
 uint16_t transport_checksum(uint8_t protocol, buf_t *buf, uint8_t *src_ip, uint8_t *dst_ip) {
     // TO-DO
+    // Step1 增加UDP伪头部
+    buf_add_header(buf, sizeof(peso_hdr_t));
+    peso_hdr_t *peso_hdr = (peso_hdr_t *)buf->data;
+
+    // Step2 暂存IP头部
+    uint8_t saved_ip_hdr[sizeof(peso_hdr_t)];
+    memcpy(saved_ip_hdr, buf->data, sizeof(peso_hdr_t));
+
+    // Step3 填写UDP伪头部字段
+    memcpy(peso_hdr->src_ip, src_ip, NET_IP_LEN);
+    memcpy(peso_hdr->dst_ip, dst_ip, NET_IP_LEN);
+    peso_hdr->placeholder = 0;
+    peso_hdr->protocol = protocol;
+    peso_hdr->total_len16 = swap16(buf->len - sizeof(peso_hdr_t));
+    
+    // Step4 计算校验和
+    uint16_t checksum = checksum16((uint16_t *)buf->data, buf->len);
+
+    // Step5 恢复IP头部
+    memcpy(buf->data, saved_ip_hdr, sizeof(peso_hdr_t));
+
+    // Step6 去除UDP伪头部
+    buf_remove_header(buf, sizeof(peso_hdr_t));
+
+    // Step7 返回校验和值
+    return checksum;
 }
